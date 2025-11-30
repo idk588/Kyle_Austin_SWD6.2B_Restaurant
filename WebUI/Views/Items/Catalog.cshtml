@@ -1,0 +1,60 @@
+﻿@using Domain.Interfaces
+@using Domain.Models
+@model IEnumerable<ItemValidating>
+
+@{
+    // true when we are using the page for approvals
+    bool isApprovalMode = ViewBag.ApprovalMode == true;
+
+    // view mode, from query string or ViewBag (cards / list)
+    string viewMode = ViewBag.ViewMode as string ?? "cards";
+}
+
+<h2>@(isApprovalMode ? "Pending Items" : "Catalog")</h2>
+
+<div class="mb-3">
+    <a asp-action="Catalog" asp-route-view="cards" class="btn btn-outline-secondary">Card view</a>
+    <a asp-action="Catalog" asp-route-view="list" class="btn btn-outline-secondary">List view</a>
+</div>
+
+<form asp-action="Approve" method="post">
+    <div class="row">
+
+        @foreach (var item in Model)
+        {
+            <div class="col-md-4 mb-3">
+
+                @* Show checkbox only in approval mode *@
+                @if (isApprovalMode)
+                {
+                    if (item is Restaurant r)
+                    {
+                        <input type="checkbox" name="restaurantIds" value="@r.Id" />
+                    }
+                    else if (item is MenuItem m)
+                    {
+                        <input type="checkbox" name="menuItemIds" value="@m.Id" />
+                    }
+                }
+
+                @* Render partial view chosen by GetCardPartial() *@
+                @if (viewMode == "list")
+                {
+                    @await Html.PartialAsync(item.GetCardPartial(), item)
+                }
+                else
+                {
+                    @await Html.PartialAsync(item.GetCardPartial(), item)
+                }
+
+            </div>
+        }
+
+    </div>
+
+    @*Only show Approve button in approval mode *@
+    @if (isApprovalMode)
+    {
+        <button type="submit" class="btn btn-primary">Approve selected</button>
+    }
+</form>

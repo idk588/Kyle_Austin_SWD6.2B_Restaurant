@@ -1,0 +1,13 @@
+﻿@model Domain.Models.Restaurant
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">@Model.Name</h5>
+        @if (!string.IsNullOrEmpty(Model.Description))
+        {
+            <p class="card-text">@Model.Description</p>
+        }
+        <small>@Model.Address</small><br />
+        <small>@Model.Phone</small>
+    </div>
+</div>
