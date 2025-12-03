@@ -5,35 +5,39 @@ namespace WebUI.Controllers
 {
     public class ItemsController : Controller
     {
-        // normal catalog (browsing)
+        private readonly ItemsRepository _repo;
+
+        public ItemsController([FromKeyedServices("memory")] ItemsRepository repo)
+        {
+            _repo = repo;
+        }
+
+        // Normal catalog
         public IActionResult Catalog(bool approvalMode = false, string view = "cards")
         {
             ViewBag.ApprovalMode = approvalMode;
             ViewBag.ViewMode = view;
 
-            // TODO: later load real items from repository
-            var items = new List<ItemValidating>();
+            var items = _repo.Get();   // ← Load imported items
 
-            return View(items); // uses Views/Items/Catalog.cshtml
+            return View(items);
         }
 
-        // 🔥 this will be used when we come to SE3.3, but we stub it now
+        // Approve action (used later)
         [HttpPost]
         public IActionResult Approve(List<int> restaurantIds, List<Guid> menuItemIds)
         {
-            // TODO: call ItemsDbRepository.Approve(...) later
-            // For now, just redirect back to normal catalog
+            // Later will call ItemsDbRepository
             return RedirectToAction("Catalog");
         }
 
-        // Example: open the SAME Catalog view in "approval mode"
+        // Pending catalog (later used in approval)
         public IActionResult Pending()
         {
             ViewBag.ApprovalMode = true;
             ViewBag.ViewMode = "cards";
 
-            // TODO: later: load pending restaurants/menuItems from DB as IItemValidating
-            var pendingItems = new List<ItemValidating>();
+            var pendingItems = _repo.Get();  // ← Load imported items
 
             return View("Catalog", pendingItems);
         }
