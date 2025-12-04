@@ -10,5 +10,7 @@ namespace Domain.Interfaces
     {
         List<string> GetValidators();
         string GetCardPartial();
+
+        string? ImageUrl { get; set; }
     }
 }

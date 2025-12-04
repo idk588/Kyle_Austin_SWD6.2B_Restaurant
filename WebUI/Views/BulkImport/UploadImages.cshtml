@@ -1,0 +1,56 @@
+@{
+    ViewData["Title"] = "Upload Images ZIP";
+}
+
+<div class="container mt-4">
+
+    <h2>Upload Images ZIP</h2>
+
+    <p class="text-muted">
+        Upload the ZIP file that you downloaded earlier and where you replaced the
+        <code>default.jpg</code> images with real pictures. The system will match folders
+        <strong>R-1, R-2, M-1, ...</strong> to the imported restaurants and menu items.
+    </p>
+
+    @if (TempData["msg"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["msg"]
+        </div>
+    }
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            @foreach (var modelState in ViewData.ModelState.Values)
+            {
+                foreach (var error in modelState.Errors)
+                {
+                    <div>@error.ErrorMessage</div>
+                }
+            }
+        </div>
+    }
+
+    <form asp-action="UploadImages"
+          asp-controller="BulkImport"
+          method="post"
+          enctype="multipart/form-data"
+          class="mt-3">
+
+        <div class="mb-3">
+            <label class="form-label">Select ZIP file</label>
+            <input type="file" name="zipFile" class="form-control" accept=".zip" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            Upload ZIP
+        </button>
+    </form>
+
+    <div class="mt-3">
+        <a asp-controller="BulkImport" asp-action="BulkImport" class="btn btn-secondary">
+            Back to JSON Import
+        </a>
+    </div>
+</div>

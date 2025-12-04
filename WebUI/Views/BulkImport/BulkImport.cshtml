@@ -1,5 +1,5 @@
 ﻿@{
-    ViewData["Title"] = "Bulk Import";
+    ViewData["Title"] = "Bulk Import JSON File";
 }
 
 <div class="container mt-4">
@@ -13,34 +13,62 @@
         </div>
     }
 
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            @foreach (var modelState in ViewData.ModelState.Values)
+            {
+                foreach (var error in modelState.Errors)
+                {
+                    <div>@error.ErrorMessage</div>
+                }
+            }
+        </div>
+    }
+
     <div class="card shadow-sm">
         <div class="card-body">
 
             <p class="text-muted">
                 Upload a <strong>.json</strong> file containing Restaurants and Menu Items.
-                The data will be validated and stored temporarily in memory
-                (as required in <strong>AA2.3</strong> before committing to database).
+                The data will be validated and stored temporarily in memory (as required in
+                <strong>AA2.3</strong>) and a ZIP file with default images will be generated
+                (as required in <strong>AA4.3</strong>).
             </p>
 
-            <form asp-action="BulkImport" asp-controller="BulkImport"
-                  method="post" enctype="multipart/form-data">
+            <form asp-controller="BulkImport"
+                  asp-action="BulkImport"
+                  method="post"
+                  enctype="multipart/form-data">
 
                 <div class="mb-3">
                     <label class="form-label">Select JSON File</label>
-                    <input type="file" name="jsonFile" class="form-control" accept=".json" required />
+                    <input type="file"
+                           name="jsonFile"
+                           class="form-control"
+                           accept=".json"
+                           required />
                 </div>
 
                 <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-upload"></i> Import
+                    Import JSON &amp; Download ZIP
                 </button>
             </form>
 
         </div>
     </div>
 
-    <div class="mt-4">
-        <a href="/Items/Catalog" class="btn btn-secondary">
+    <div class="mt-4 d-flex gap-2">
+        <a asp-controller="Items"
+           asp-action="Catalog"
+           class="btn btn-secondary">
             View Imported Items
+        </a>
+
+        <a asp-controller="BulkImport"
+           asp-action="UploadImages"
+           class="btn btn-outline-secondary">
+            Upload Images ZIP
         </a>
     </div>
 
