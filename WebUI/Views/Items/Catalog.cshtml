@@ -19,7 +19,6 @@
 
 <form asp-action="Approve" method="post">
     <div class="row">
-
         @foreach (var item in Model)
         {
             <div class="col-md-4 mb-3">
@@ -42,9 +41,6 @@
                 {
                     @await Html.PartialAsync(item.GetCardPartial(), item)
                 }
-                else
-                {
-                    @await Html.PartialAsync(item.GetCardPartial(), item)
                 }
 
             </div>
