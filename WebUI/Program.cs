@@ -1,3 +1,4 @@
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WebUI.Data;
@@ -25,7 +26,10 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 // ----------------- IDENTITY -----------------
 builder.Services.AddDefaultIdentity<IdentityUser>(options =>
-        options.SignIn.RequireConfirmedAccount = true)
+{
+    // keep it simple for assignment – no email confirmation required
+    options.SignIn.RequireConfirmedAccount = false;
+})
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 // ----------------- MVC -----------------
@@ -49,6 +53,9 @@ builder.Services.AddScoped<ImportItemFactory>();
 
 // ----------------- BUILD APP -----------------
 var app = builder.Build();
+
+// ----------------- SEED HARD-CODED ADMIN USER -----------------
+SeedAdminUserAsync(app.Services).GetAwaiter().GetResult();
 
 // ----------------- MIDDLEWARE PIPELINE -----------------
 if (app.Environment.IsDevelopment())
@@ -76,3 +83,35 @@ app.MapControllerRoute(
 app.MapRazorPages();
 
 app.Run();
+
+
+// ------------- LOCAL FUNCTION: create hard-coded admin -------------
+static async Task SeedAdminUserAsync(IServiceProvider services)
+{
+    using var scope = services.CreateScope();
+
+    // 1) make sure Identity DB schema (AspNetUsers, etc.) exists
+    var identityContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await identityContext.Database.MigrateAsync();
+
+    // 2) then we can safely use UserManager
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+
+    // 🔐 HARD-CODED SITE ADMIN CREDENTIALS
+    var adminEmail = "admin@gmail.com";
+    var adminPassword = "Admin123!";
+
+    var existing = await userManager.FindByEmailAsync(adminEmail);
+
+    if (existing == null)
+    {
+        var adminUser = new IdentityUser
+        {
+            UserName = adminEmail,
+            Email = adminEmail,
+            EmailConfirmed = true
+        };
+
+        await userManager.CreateAsync(adminUser, adminPassword);
+    }
+}
