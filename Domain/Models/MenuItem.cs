@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Domain.Models
 {
-    public class MenuItem : ItemValidating
+    public class MenuItem : IItemValidating
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -24,7 +24,7 @@ namespace Domain.Models
         public string Status { get; set; } = "Pending";
         public string? ImageUrl { get; set; }
 
-        // ItemValidating 
+
         public List<string> GetValidators()
         {
             return new List<string>(); // Will be implemented later

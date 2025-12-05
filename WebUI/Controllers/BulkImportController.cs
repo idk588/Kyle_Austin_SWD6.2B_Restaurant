@@ -11,26 +11,29 @@ namespace WebUI.Controllers
 {
     public class BulkImportController : Controller
     {
-        // use the interface, not a concrete class
+        // memory = temporary, db = final storage
         private readonly ItemsRepository _memoryRepo;
+        private readonly ItemsRepository _dbRepo;
         private readonly ImportItemFactory _factory;
 
         public BulkImportController(
             [FromKeyedServices("memory")] ItemsRepository memoryRepo,
+            [FromKeyedServices("db")] ItemsRepository dbRepo,
             ImportItemFactory factory)
         {
             _memoryRepo = memoryRepo;
+            _dbRepo = dbRepo;
             _factory = factory;
         }
 
-        // STEP 1 → Show upload page
+        // STEP 1 → Show JSON upload page
         [HttpGet]
         public IActionResult BulkImport()
         {
             return View();
         }
 
-        // STEP 2 → Upload JSON + Create ZIP (AA4.3)
+        // STEP 2 → Upload JSON + generate ZIP with default images
         [HttpPost]
         public IActionResult BulkImport(IFormFile jsonFile)
         {
@@ -40,31 +43,29 @@ namespace WebUI.Controllers
                 return View();
             }
 
-            // Read file contents
+            // Read JSON
             string json;
             using (var reader = new StreamReader(jsonFile.OpenReadStream()))
             {
                 json = reader.ReadToEnd();
             }
 
-            // Convert JSON → objects using assignment factory
+            // Parse JSON → instances
             var items = _factory.Create(json);
 
-            // Store data in memory (not DB yet)
+            // Save in memory (AA2.3)
             _memoryRepo.Save(items);
 
-            // Create a temporary working directory
+            // Build temp folder for ZIP
             var tempFolder = Path.Combine(Path.GetTempPath(), $"import-{Guid.NewGuid()}");
             Directory.CreateDirectory(tempFolder);
 
-            // Image placeholders numbering
             int restaurantCounter = 1;
             int menuCounter = 1;
 
-            // Path to default image
+            // Default image in wwwroot
             var defaultImagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "default.jpg");
 
-            // Build folder structure for ZIP
             foreach (var item in items)
             {
                 string folderName;
@@ -93,7 +94,7 @@ namespace WebUI.Controllers
 
             ZipFile.CreateFromDirectory(tempFolder, zipPath);
 
-            // ✅ Return ZIP download to user (no File() ambiguity)
+            // Download ZIP
             var bytes = System.IO.File.ReadAllBytes(zipPath);
             return new FileContentResult(bytes, "application/zip")
             {
@@ -101,70 +102,92 @@ namespace WebUI.Controllers
             };
         }
 
-        // STEP 3 → Upload ZIP with updated images
+        // STEP 3 → Commit: upload edited ZIP, save images in wwwroot, link & save to DB
+
+        // We re-use the UploadImages.cshtml view for this
         [HttpGet]
-        public IActionResult UploadImages()
+        public IActionResult Commit()
         {
-            return View();
+            return View("UploadImages");
         }
 
         [HttpPost]
-        public IActionResult UploadImages(IFormFile zipFile)
+        public IActionResult Commit(IFormFile zipFile)
         {
             if (zipFile == null || zipFile.Length == 0)
             {
                 ModelState.AddModelError("", "Please upload a valid ZIP file.");
-                return View();
+                return View("UploadImages");
             }
 
-            // Temporary extract folder
-            var extractPath = Path.Combine(Path.GetTempPath(), $"images-{Guid.NewGuid()}");
+            // 1) Extract ZIP to temp
+            var extractPath = Path.Combine(Path.GetTempPath(), $"commit-{Guid.NewGuid()}");
             Directory.CreateDirectory(extractPath);
 
-            // Save uploaded zip
             var zipPath = Path.Combine(extractPath, "uploaded.zip");
             using (var stream = new FileStream(zipPath, FileMode.Create))
             {
                 zipFile.CopyTo(stream);
             }
 
-            // Extract files
             ZipFile.ExtractToDirectory(zipPath, extractPath);
 
-            // Get items currently in memory
+            // 2) Get pending items from memory repo
             var items = _memoryRepo.Get();
 
             int restaurantCounter = 1;
             int menuCounter = 1;
 
+            // 3) Prepare wwwroot image folders
+            var webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var restaurantsRoot = Path.Combine(webRoot, "images", "restaurants");
+            var menuItemsRoot = Path.Combine(webRoot, "images", "menuitems");
+
+            Directory.CreateDirectory(restaurantsRoot);
+            Directory.CreateDirectory(menuItemsRoot);
+
             foreach (var item in items)
             {
                 string folderName;
+                bool isRestaurant;
 
                 if (item.GetType().Name.ToLower().Contains("restaurant"))
                 {
                     folderName = $"R-{restaurantCounter++}";
+                    isRestaurant = true;
                 }
                 else
                 {
                     folderName = $"M-{menuCounter++}";
+                    isRestaurant = false;
                 }
 
                 var folderPath = Path.Combine(extractPath, folderName);
+                if (!Directory.Exists(folderPath))
+                    continue;
 
-                if (Directory.Exists(folderPath))
-                {
-                    var uploadedImage = Directory.GetFiles(folderPath).FirstOrDefault();
+                // first file in that folder = chosen image
+                var uploadedImage = Directory.GetFiles(folderPath).FirstOrDefault();
+                if (uploadedImage == null)
+                    continue;
 
-                    if (uploadedImage != null)
-                    {
-                        // ⬅ this needs ImagePath property on your models
-                        item.ImageUrl = uploadedImage;
-                    }
-                }
+                // 4) Copy to wwwroot with unique file name
+                var extension = Path.GetExtension(uploadedImage);
+                var uniqueName = $"{Guid.NewGuid()}{extension}";
+                var targetFolder = isRestaurant ? restaurantsRoot : menuItemsRoot;
+                var targetPath = Path.Combine(targetFolder, uniqueName);
+
+                System.IO.File.Copy(uploadedImage, targetPath, true);
+
+                // 5) Save relative path on item (for <img src="...">)
+                var relativePath = $"/images/{(isRestaurant ? "restaurants" : "menuitems")}/{uniqueName}";
+                item.ImageUrl = relativePath;
             }
 
-            TempData["msg"] = "Images uploaded and linked successfully!";
+            // 6) Save everything into DB using db repo
+            _dbRepo.Save(items);
+
+            TempData["msg"] = "Items committed to database with images!";
             return RedirectToAction("Catalog", "Items");
         }
     }

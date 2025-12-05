@@ -1,15 +1,17 @@
 @{
-    ViewData["Title"] = "Upload Images ZIP";
+    ViewData["Title"] = "Upload Images ZIP & Commit";
 }
 
 <div class="container mt-4">
 
-    <h2>Upload Images ZIP</h2>
+    <h2 class="mb-3">Upload Images ZIP &amp; Commit</h2>
 
     <p class="text-muted">
-        Upload the ZIP file that you downloaded earlier and where you replaced the
-        <code>default.jpg</code> images with real pictures. The system will match folders
-        <strong>R-1, R-2, M-1, ...</strong> to the imported restaurants and menu items.
+        Upload the ZIP file that you downloaded earlier (containing folders
+        <code>R-1, R-2, M-1, ...</code>) after replacing each <code>default.jpg</code>
+        with a real image. The system will save these images in
+        <code>wwwroot/images</code>, link them to the corresponding restaurants or menu
+        items, and commit everything to the database.
     </p>
 
     @if (TempData["msg"] != null)
@@ -32,24 +34,30 @@
         </div>
     }
 
-    <form asp-action="UploadImages"
-          asp-controller="BulkImport"
+    <form asp-controller="BulkImport"
+          asp-action="Commit"
           method="post"
           enctype="multipart/form-data"
           class="mt-3">
 
         <div class="mb-3">
-            <label class="form-label">Select ZIP file</label>
-            <input type="file" name="zipFile" class="form-control" accept=".zip" required />
+            <label class="form-label">Select edited ZIP file</label>
+            <input type="file"
+                   name="zipFile"
+                   class="form-control"
+                   accept=".zip"
+                   required />
         </div>
 
         <button type="submit" class="btn btn-primary">
-            Upload ZIP
+            Upload ZIP &amp; Commit to Database
         </button>
     </form>
 
     <div class="mt-3">
-        <a asp-controller="BulkImport" asp-action="BulkImport" class="btn btn-secondary">
+        <a asp-controller="BulkImport"
+           asp-action="BulkImport"
+           class="btn btn-secondary">
             Back to JSON Import
         </a>
     </div>

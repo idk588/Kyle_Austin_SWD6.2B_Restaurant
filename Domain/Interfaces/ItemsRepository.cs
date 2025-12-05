@@ -8,8 +8,10 @@ namespace Domain.Interfaces
 {
     public interface ItemsRepository
     {
-        List<ItemValidating> Get();
-        void Save(List<ItemValidating> items);
+        List<IItemValidating> Get();
+        void Save(List<IItemValidating> items);
+        void Add(List<IItemValidating> items);
+
         void Approve(List<string> ids);
 
     }

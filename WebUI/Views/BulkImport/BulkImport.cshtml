@@ -31,9 +31,8 @@
 
             <p class="text-muted">
                 Upload a <strong>.json</strong> file containing Restaurants and Menu Items.
-                The data will be validated and stored temporarily in memory (as required in
-                <strong>AA2.3</strong>) and a ZIP file with default images will be generated
-                (as required in <strong>AA4.3</strong>).
+                The data will be validated and stored temporarily in memory (AA2.3) and a ZIP
+                file with default images will be generated (AA4.3).
             </p>
 
             <form asp-controller="BulkImport"
@@ -66,9 +65,9 @@
         </a>
 
         <a asp-controller="BulkImport"
-           asp-action="UploadImages"
+           asp-action="Commit"
            class="btn btn-outline-secondary">
-            Upload Images ZIP
+            Upload Images ZIP &amp; Commit to DB
         </a>
     </div>
 

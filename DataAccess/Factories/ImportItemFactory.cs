@@ -9,50 +9,150 @@ using Domain.Interfaces;
 
 namespace DataAccess.Factories
 {
-    public class ImportItemFactory
-    {
-        public List<ItemValidating> Create(string json)
-        {
-            var items = new List<ItemValidating>();
+	public class ImportItemFactory
+	{
+		public List<IItemValidating> Create(string json)
+		{
+			var result = new List<IItemValidating>();
 
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
+			using var doc = JsonDocument.Parse(json);
+			var root = doc.RootElement;
 
-            foreach (var element in root.EnumerateArray())
-            {
-                string type = element.GetProperty("type").GetString();
+			// CASE 1: root is an OBJECT { "restaurants": [...], "menuItems": [...] }
+			if (root.ValueKind == JsonValueKind.Object)
+			{
+				AddRestaurantsFromObject(root, result);
+				AddMenuItemsFromObject(root, result);
+			}
+			// CASE 2: root is an ARRAY [ {...}, {...}, ... ]
+			else if (root.ValueKind == JsonValueKind.Array)
+			{
+				foreach (var element in root.EnumerateArray())
+				{
+					// Heuristic: if it has "restaurantId" it's a menu item, otherwise restaurant
+					if (element.TryGetProperty("restaurantId", out _))
+					{
+						var menuItem = CreateMenuItemFromElement(element);
+						result.Add(menuItem);
+					}
+					else
+					{
+						var restaurant = CreateRestaurantFromElement(element);
+						result.Add(restaurant);
+					}
+				}
+			}
 
-                if (type.Equals("restaurant", StringComparison.OrdinalIgnoreCase))
-                {
-                    var restaurant = new Restaurant
-                    {
-                        Name = element.GetProperty("name").GetString(),
-                        OwnerEmailAddress = element.GetProperty("ownerEmailAddress").GetString(),
-                        Description = element.TryGetProperty("description", out var desc) ? desc.GetString() : null,
-                        Address = element.TryGetProperty("address", out var addr) ? addr.GetString() : null,
-                        Phone = element.TryGetProperty("phone", out var phone) ? phone.GetString() : null,
-                        Status = "Pending"
-                    };
+			return result;
+		}
 
-                    items.Add(restaurant);
-                }
-                else if (type.Equals("menuItem", StringComparison.OrdinalIgnoreCase))
-                {
-                    var menuItem = new MenuItem
-                    {
-                        Title = element.GetProperty("title").GetString(),
-                        Price = element.GetProperty("price").GetDecimal(),
-                        RestaurantId = int.Parse(
-                            element.GetProperty("restaurantId").GetString().Replace("R-", "")
-                        ),
-                        Status = "Pending"
-                    };
+		// --------------- FROM OBJECT ROOT -------------------
 
-                    items.Add(menuItem);
-                }
-            }
+		private void AddRestaurantsFromObject(JsonElement root, List<IItemValidating> result)
+		{
+			if (root.TryGetProperty("restaurants", out var restaurantsElement) &&
+				restaurantsElement.ValueKind == JsonValueKind.Array)
+			{
+				foreach (var r in restaurantsElement.EnumerateArray())
+				{
+					var restaurant = CreateRestaurantFromElement(r);
+					result.Add(restaurant);
+				}
+			}
+		}
 
-            return items;
-        }
-    }
+		private void AddMenuItemsFromObject(JsonElement root, List<IItemValidating> result)
+		{
+			if (root.TryGetProperty("menuItems", out var menuItemsElement) &&
+				menuItemsElement.ValueKind == JsonValueKind.Array)
+			{
+				foreach (var m in menuItemsElement.EnumerateArray())
+				{
+					var menuItem = CreateMenuItemFromElement(m);
+					result.Add(menuItem);
+				}
+			}
+		}
+
+		// --------------- HELPERS TO BUILD MODELS -------------------
+
+		private Restaurant CreateRestaurantFromElement(JsonElement r)
+		{
+			return new Restaurant
+			{
+				Id = TryGetInt(r, "id"),
+				Name = TryGetString(r, "name"),
+				Description = TryGetString(r, "description"),
+				Address = TryGetString(r, "address"),
+				Phone = TryGetString(r, "phone"),
+				OwnerEmailAddress = TryGetString(r, "ownerEmailAddress"),
+				Status = "Pending",
+				ImageUrl = null
+			};
+		}
+
+		private MenuItem CreateMenuItemFromElement(JsonElement m)
+		{
+			return new MenuItem
+			{
+				Id = TryGetGuid(m, "id"),
+				Title = TryGetString(m, "title"),
+				Price = TryGetDecimal(m, "price"),
+				RestaurantId = TryGetInt(m, "restaurantId"),
+				Status = "Pending",
+				ImageUrl = null
+			};
+		}
+
+		// --------------- SAFE JSON READS (no exceptions) -------------------
+
+		private static string TryGetString(JsonElement element, string propertyName)
+		{
+			return element.TryGetProperty(propertyName, out var prop)
+				? prop.GetString() ?? string.Empty
+				: string.Empty;
+		}
+
+		private static int TryGetInt(JsonElement element, string propertyName)
+		{
+			if (element.TryGetProperty(propertyName, out var prop))
+			{
+				if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out var value))
+					return value;
+
+				if (prop.ValueKind == JsonValueKind.String &&
+					int.TryParse(prop.GetString(), out var parsed))
+					return parsed;
+			}
+
+			return 0;
+		}
+
+		private static Guid TryGetGuid(JsonElement element, string propertyName)
+		{
+			if (element.TryGetProperty(propertyName, out var prop) &&
+				prop.ValueKind == JsonValueKind.String &&
+				Guid.TryParse(prop.GetString(), out var g))
+			{
+				return g;
+			}
+
+			return Guid.NewGuid();
+		}
+
+		private static decimal TryGetDecimal(JsonElement element, string propertyName)
+		{
+			if (element.TryGetProperty(propertyName, out var prop))
+			{
+				if (prop.ValueKind == JsonValueKind.Number && prop.TryGetDecimal(out var d))
+					return d;
+
+				if (prop.ValueKind == JsonValueKind.String &&
+					decimal.TryParse(prop.GetString(), out var parsed))
+					return parsed;
+			}
+
+			return 0m;
+		}
+	}
 }

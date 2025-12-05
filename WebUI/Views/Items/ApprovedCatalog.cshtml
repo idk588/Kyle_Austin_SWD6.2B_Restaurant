@@ -1,0 +1,33 @@
+﻿@model IEnumerable<Domain.Models.Restaurant>
+
+@{
+    ViewData["Title"] = "Approved Restaurants";
+}
+
+<div class="container mt-4">
+    <h2>Approved Restaurants</h2>
+
+    <div class="row">
+        @foreach (var r in Model)
+        {
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    @if (!string.IsNullOrEmpty(r.ImageUrl))
+                    {
+                        <img src="@r.ImageUrl" class="card-img-top" alt="@r.Name" />
+                    }
+                    <div class="card-body">
+                        <h5 class="card-title">@r.Name</h5>
+                        <p class="card-text">@r.Description</p>
+                        <a asp-controller="Items"
+                           asp-action="RestaurantMenu"
+                           asp-route-id="@r.Id"
+                           class="btn btn-primary">
+                            View Menu
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

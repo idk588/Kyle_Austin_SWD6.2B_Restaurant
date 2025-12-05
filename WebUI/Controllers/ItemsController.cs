@@ -1,45 +1,45 @@
-﻿using Domain.Interfaces;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Domain.Interfaces;
+using DataAccess.Repositories;
+using Domain.Models;
+using System.Collections.Generic;
 
 namespace WebUI.Controllers
 {
     public class ItemsController : Controller
     {
-        private readonly ItemsRepository _repo;
+        private readonly ItemsRepository _memoryRepo;
+        private readonly ItemsDbRepository _dbRepo;
 
-        public ItemsController([FromKeyedServices("memory")] ItemsRepository repo)
+        public ItemsController(
+            [FromKeyedServices("memory")] ItemsRepository memoryRepo,
+            ItemsDbRepository dbRepo)
         {
-            _repo = repo;
+            _memoryRepo = memoryRepo;
+            _dbRepo = dbRepo;
         }
 
-        // Normal catalog
-        public IActionResult Catalog(bool approvalMode = false, string view = "cards")
-        {
-            ViewBag.ApprovalMode = approvalMode;
-            ViewBag.ViewMode = view;
-
-            var items = _repo.Get();   // ← Load imported items
-
-            return View(items);
-        }
-
-        // Approve action (used later)
-        [HttpPost]
-        public IActionResult Approve(List<int> restaurantIds, List<Guid> menuItemIds)
-        {
-            // Later will call ItemsDbRepository
-            return RedirectToAction("Catalog");
-        }
-
-        // Pending catalog (later used in approval)
+        // view for pending (in-memory) items – what you already used before
         public IActionResult Pending()
         {
-            ViewBag.ApprovalMode = true;
-            ViewBag.ViewMode = "cards";
+            var items = _memoryRepo.Get();
+            ViewBag.Mode = "Pending";
+            return View("Catalog", items);   // uses existing Catalog view
+        }
 
-            var pendingItems = _repo.Get();  // ← Load imported items
+        //  show only APPROVED restaurants in card view
+        public IActionResult Catalog()
+        {
+            List<Restaurant> approvedRestaurants = _dbRepo.GetApprovedRestaurants();
+            return View("ApprovedCatalog", approvedRestaurants);
+        }
 
-            return View("Catalog", pendingItems);
+        // show its APPROVED menu items in list view
+        public IActionResult RestaurantMenu(int id)
+        {
+            List<MenuItem> menuItems = _dbRepo.GetApprovedMenuItemsByRestaurant(id);
+            ViewBag.RestaurantId = id;
+            return View("RestaurantMenuItems", menuItems);
         }
     }
 }

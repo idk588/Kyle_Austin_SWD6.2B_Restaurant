@@ -1,43 +1,56 @@
-using DataAccess.Context;
-using DataAccess.Factories;
-using DataAccess.Repositories;
-using Domain.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WebUI.Data;
+using Domain.Interfaces;
+using DataAccess.Context;
+using DataAccess.Repositories;
+using DataAccess.Factories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
+// ----------------- CONNECTION STRING -----------------
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-// 1)DbContext 
+// ----------------- DB CONTEXTS -----------------
+// Identity DB (for login / register)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options =>
-    options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>();
+// App DB (for restaurants + menu items)
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(connectionString));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// 2)AppDbContext 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(connectionString)); 
+// ----------------- IDENTITY -----------------
+builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+        options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores<ApplicationDbContext>();
 
-// 3) Register Keyed Repositories
+// ----------------- MVC -----------------
+builder.Services.AddControllersWithViews();
+
+// ----------------- CACHING -----------------
+builder.Services.AddMemoryCache();
+
+// ----------------- OUR REPOSITORIES -----------------
+// In-memory repo (AA2.3 temporary storage)
 builder.Services.AddKeyedScoped<ItemsRepository, ItemsInMemoryRepository>("memory");
+
+// DB repo (final commit to database)
 builder.Services.AddKeyedScoped<ItemsRepository, ItemsDbRepository>("db");
 
-// 4) MVC
-builder.Services.AddControllersWithViews();
+// Concrete ItemsDbRepository (ItemsController asks for this directly)
+builder.Services.AddScoped<ItemsDbRepository>();
+
+// ----------------- OUR FACTORIES -----------------
 builder.Services.AddScoped<ImportItemFactory>();
 
-
+// ----------------- BUILD APP -----------------
 var app = builder.Build();
 
-
+// ----------------- MIDDLEWARE PIPELINE -----------------
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -52,6 +65,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(

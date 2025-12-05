@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Domain.Models
 {
-    public class Restaurant : ItemValidating
+    public class Restaurant : IItemValidating
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

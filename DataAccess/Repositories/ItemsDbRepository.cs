@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Domain.Interfaces;
+﻿using Domain.Interfaces;
 using Domain.Models;
 using DataAccess.Context;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DataAccess.Repositories
 {
@@ -18,23 +15,45 @@ namespace DataAccess.Repositories
             _db = db;
         }
 
-        public List<ItemValidating> Get()
+        // Generic Get (not really used for step 6, but for interface)
+        public List<IItemValidating> Get()
         {
-            var restaurants = _db.Restaurants.ToList<ItemValidating>();
-            var menuItems = _db.MenuItems.ToList<ItemValidating>();
+            var restaurants = _db.Restaurants
+                .Where(r => r.Status == "Approved")
+                .Cast<IItemValidating>();
+
+            var menuItems = _db.MenuItems
+                .Where(m => m.Status == "Approved")
+                .Cast<IItemValidating>();
 
             return restaurants.Concat(menuItems).ToList();
         }
 
-        public void Save(List<ItemValidating> items)
+        // For compatibility with interface - delegate to Add
+        public void Save(List<IItemValidating> items)
+        {
+            Add(items);
+        }
+
+        
+        public void Add(List<IItemValidating> items)
         {
             foreach (var item in items)
             {
                 if (item is Restaurant r)
-                    _db.Restaurants.Add(r);
+                {
+                    if (string.IsNullOrEmpty(r.Status))
+                        r.Status = "Approved";   
 
-                if (item is MenuItem m)
+                    _db.Restaurants.Add(r);
+                }
+                else if (item is MenuItem m)
+                {
+                    if (string.IsNullOrEmpty(m.Status))
+                        m.Status = "Approved";
+
                     _db.MenuItems.Add(m);
+                }
             }
 
             _db.SaveChanges();
@@ -42,21 +61,41 @@ namespace DataAccess.Repositories
 
         public void Approve(List<string> ids)
         {
+            
             foreach (var id in ids)
             {
                 if (int.TryParse(id, out var restId))
                 {
                     var r = _db.Restaurants.Find(restId);
-                    if (r != null) r.Status = "Approved";
+                    if (r != null)
+                        r.Status = "Approved";
                 }
-                else if (Guid.TryParse(id, out var mId))
+                else if (Guid.TryParse(id, out var menuId))
                 {
-                    var m = _db.MenuItems.Find(mId);
-                    if (m != null) m.Status = "Approved";
+                    var m = _db.MenuItems.Find(menuId);
+                    if (m != null)
+                        m.Status = "Approved";
                 }
             }
 
             _db.SaveChanges();
+        }
+
+
+
+
+        public List<Restaurant> GetApprovedRestaurants()
+        {
+            return _db.Restaurants
+                .Where(r => r.Status == "Approved")
+                .ToList();
+        }
+
+        public List<MenuItem> GetApprovedMenuItemsByRestaurant(int restaurantId)
+        {
+            return _db.MenuItems
+                .Where(m => m.Status == "Approved" && m.RestaurantId == restaurantId)
+                .ToList();
         }
     }
 }
