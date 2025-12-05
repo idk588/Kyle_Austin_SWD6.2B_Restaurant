@@ -3,54 +3,82 @@
 @model IEnumerable<IItemValidating>
 
 @{
-    // true when we are using the page for approvals
-    bool isApprovalMode = ViewBag.ApprovalMode == true;
-
-    // view mode, from query string or ViewBag (cards / list)
-    string viewMode = ViewBag.ViewMode as string ?? "cards";
+    ViewData["Title"] = "Imported Items (Pending)";
+    var viewMode = (string?)ViewBag.ViewMode ?? "cards";    // "cards" or "list"
 }
 
-<h2>@(isApprovalMode ? "Pending Items" : "Catalog")</h2>
+<div class="container mt-4">
+    <h2>Imported Items (Pending)</h2>
 
-<div class="mb-3">
-    <a asp-action="Catalog" asp-route-view="cards" class="btn btn-outline-secondary">Card view</a>
-    <a asp-action="Catalog" asp-route-view="list" class="btn btn-outline-secondary">List view</a>
-</div>
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info mt-3">
+            No items have been imported into memory yet. Go back to Bulk Import and upload a JSON file.
+        </div>
+    }
+    else
+    {
+        <div class="mb-3">
+            <a asp-action="Pending" asp-route-view="cards" class="btn btn-sm btn-outline-primary me-2">
+                Card view
+            </a>
+            <a asp-action="Pending" asp-route-view="list" class="btn btn-sm btn-outline-secondary">
+                List view
+            </a>
+        </div>
 
-<form asp-action="Approve" method="post">
-    <div class="row">
-        @foreach (var item in Model)
+        @if (viewMode == "cards")
         {
-            <div class="col-md-4 mb-3">
-
-                @* Show checkbox only in approval mode *@
-                @if (isApprovalMode)
+            <div class="row">
+                @foreach (var item in Model)
                 {
-                    if (item is Restaurant r)
-                    {
-                        <input type="checkbox" name="restaurantIds" value="@r.Id" />
-                    }
-                    else if (item is MenuItem m)
-                    {
-                        <input type="checkbox" name="menuItemIds" value="@m.Id" />
-                    }
+                    <div class="col-md-4 mb-3">
+                        @* Use the partial defined by the model (RestaurantCard or MenuItemCard) *@
+                        @await Html.PartialAsync(item.GetCardPartial(), item)
+                    </div>
                 }
-
-                @* Render partial view chosen by GetCardPartial() *@
-                @if (viewMode == "list")
-                {
-                    @await Html.PartialAsync(item.GetCardPartial(), item)
-                }
-                }
-
             </div>
         }
-
-    </div>
-
-    @*Only show Approve button in approval mode *@
-    @if (isApprovalMode)
-    {
-        <button type="submit" class="btn btn-primary">Approve selected</button>
+        else
+        {
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Name / Title</th>
+                        <th>Extra</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        if (item is Restaurant r)
+                        {
+                            <tr>
+                                <td>Restaurant</td>
+                                <td>@r.Name</td>
+                                <td>@r.Address</td>
+                            </tr>
+                        }
+                        else if (item is MenuItem m)
+                        {
+                            <tr>
+                                <td>Menu Item</td>
+                                <td>@m.Title</td>
+                                <td>@m.Price.ToString("0.00")</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        }
     }
-</form>
+
+    <div class="mt-3">
+        <a asp-controller="BulkImport"
+           asp-action="BulkImport"
+           class="btn btn-secondary">
+            Back to Bulk Import
+        </a>
+    </div>
+</div>
