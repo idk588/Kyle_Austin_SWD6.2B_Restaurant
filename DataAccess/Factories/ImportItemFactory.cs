@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Text.Json;
-using Domain.Models;
 using Domain.Interfaces;
 
 namespace DataAccess.Factories
@@ -18,18 +14,15 @@ namespace DataAccess.Factories
 			using var doc = JsonDocument.Parse(json);
 			var root = doc.RootElement;
 
-			// CASE 1: root is an OBJECT { "restaurants": [...], "menuItems": [...] }
 			if (root.ValueKind == JsonValueKind.Object)
 			{
 				AddRestaurantsFromObject(root, result);
 				AddMenuItemsFromObject(root, result);
 			}
-			// CASE 2: root is an ARRAY [ {...}, {...}, ... ]
 			else if (root.ValueKind == JsonValueKind.Array)
 			{
 				foreach (var element in root.EnumerateArray())
 				{
-					// Heuristic: if it has "restaurantId" it's a menu item, otherwise restaurant
 					if (element.TryGetProperty("restaurantId", out _))
 					{
 						var menuItem = CreateMenuItemFromElement(element);

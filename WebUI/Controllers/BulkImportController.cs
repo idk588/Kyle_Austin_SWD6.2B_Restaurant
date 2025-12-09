@@ -104,7 +104,6 @@ namespace WebUI.Controllers
 
         // STEP 3 → Commit: upload edited ZIP, save images in wwwroot, link & save to DB
 
-        // We re-use the UploadImages.cshtml view for this
         [HttpGet]
         public IActionResult Commit()
         {
@@ -166,12 +165,10 @@ namespace WebUI.Controllers
                 if (!Directory.Exists(folderPath))
                     continue;
 
-                // first file in that folder = chosen image
                 var uploadedImage = Directory.GetFiles(folderPath).FirstOrDefault();
                 if (uploadedImage == null)
                     continue;
 
-                // 4) Copy to wwwroot with unique file name
                 var extension = Path.GetExtension(uploadedImage);
                 var uniqueName = $"{Guid.NewGuid()}{extension}";
                 var targetFolder = isRestaurant ? restaurantsRoot : menuItemsRoot;
@@ -179,7 +176,6 @@ namespace WebUI.Controllers
 
                 System.IO.File.Copy(uploadedImage, targetPath, true);
 
-                // 5) Save relative path on item (for <img src="...">)
                 var relativePath = $"/images/{(isRestaurant ? "restaurants" : "menuitems")}/{uniqueName}";
                 item.ImageUrl = relativePath;
             }

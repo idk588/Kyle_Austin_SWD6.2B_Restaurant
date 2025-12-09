@@ -22,10 +22,6 @@ namespace DataAccess.Repositories
                 .Where(r => r.Status == "Approved")
                 .Cast<IItemValidating>();
 
-            var menuItems = _db.MenuItems
-                .Where(m => m.Status == "Approved")
-                .Cast<IItemValidating>();
-
             return restaurants.Concat(menuItems).ToList();
         }
 
@@ -61,7 +57,6 @@ namespace DataAccess.Repositories
 
         public void Approve(List<string> ids)
         {
-            
             foreach (var id in ids)
             {
                 if (int.TryParse(id, out var restId))
@@ -79,23 +74,6 @@ namespace DataAccess.Repositories
             }
 
             _db.SaveChanges();
-        }
-
-
-
-
-        public List<Restaurant> GetApprovedRestaurants()
-        {
-            return _db.Restaurants
-                .Where(r => r.Status == "Approved")
-                .ToList();
-        }
-
-        public List<MenuItem> GetApprovedMenuItemsByRestaurant(int restaurantId)
-        {
-            return _db.MenuItems
-                .Where(m => m.Status == "Approved" && m.RestaurantId == restaurantId)
-                .ToList();
         }
     }
 }

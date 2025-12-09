@@ -13,21 +13,13 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-// ----------------- DB CONTEXTS -----------------
-// Identity DB (for login / register)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
-
-// App DB (for restaurants + menu items)
-builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// ----------------- IDENTITY -----------------
 builder.Services.AddDefaultIdentity<IdentityUser>(options =>
 {
-    // keep it simple for assignment – no email confirmation required
     options.SignIn.RequireConfirmedAccount = false;
 })
     .AddEntityFrameworkStores<ApplicationDbContext>();
@@ -42,8 +34,6 @@ builder.Services.AddMemoryCache();
 // In-memory repo (AA2.3 temporary storage)
 builder.Services.AddKeyedScoped<ItemsRepository, ItemsInMemoryRepository>("memory");
 
-// DB repo (final commit to database)
-builder.Services.AddKeyedScoped<ItemsRepository, ItemsDbRepository>("db");
 
 // Concrete ItemsDbRepository (ItemsController asks for this directly)
 builder.Services.AddScoped<ItemsDbRepository>();
@@ -51,7 +41,6 @@ builder.Services.AddScoped<ItemsDbRepository>();
 // ----------------- OUR FACTORIES -----------------
 builder.Services.AddScoped<ImportItemFactory>();
 
-// ----------------- BUILD APP -----------------
 var app = builder.Build();
 
 // ----------------- SEED HARD-CODED ADMIN USER -----------------
@@ -79,13 +68,10 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
-
 app.MapRazorPages();
 
 app.Run();
 
-
-// ------------- LOCAL FUNCTION: create hard-coded admin -------------
 static async Task SeedAdminUserAsync(IServiceProvider services)
 {
     using var scope = services.CreateScope();
