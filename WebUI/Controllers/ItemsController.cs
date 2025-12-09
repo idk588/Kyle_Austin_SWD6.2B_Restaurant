@@ -24,7 +24,7 @@ namespace WebUI.Controllers
         {
             var items = _memoryRepo.Get();
             ViewBag.Mode = "Pending";
-            return View("Catalog", items);   // uses existing Catalog view
+            return View("Catalog", items); 
         }
 
         //  show only APPROVED restaurants in card view
