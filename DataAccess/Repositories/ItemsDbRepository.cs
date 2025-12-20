@@ -43,10 +43,6 @@ namespace DataAccess.Repositories
 
                     _db.Restaurants.Add(r);
                 }
-                else if (item is MenuItem m)
-                {
-                    if (string.IsNullOrEmpty(m.Status))
-                        m.Status = "Approved";
 
                     _db.MenuItems.Add(m);
                 }

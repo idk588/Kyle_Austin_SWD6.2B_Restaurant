@@ -83,7 +83,6 @@ static async Task SeedAdminUserAsync(IServiceProvider services)
     // 2) then we can safely use UserManager
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
 
-    // 🔐 HARD-CODED SITE ADMIN CREDENTIALS
     var adminEmail = "admin@gmail.com";
     var adminPassword = "Admin123!";
 

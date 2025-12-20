@@ -16,7 +16,6 @@ namespace Domain.Models
         [Required]
         public string Title { get; set; }
 
-        [Range(0, 999)]
         public decimal Price { get; set; }
 
         [Required]

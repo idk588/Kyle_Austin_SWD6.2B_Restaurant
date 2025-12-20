@@ -104,12 +104,6 @@ namespace WebUI.Controllers
 
         // STEP 3 → Commit: upload edited ZIP, save images in wwwroot, link & save to DB
 
-        [HttpGet]
-        public IActionResult Commit()
-        {
-            return View("UploadImages");
-        }
-
         [HttpPost]
         public IActionResult Commit(IFormFile zipFile)
         {
